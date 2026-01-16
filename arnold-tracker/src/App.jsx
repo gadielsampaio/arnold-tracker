@@ -470,7 +470,7 @@ function App() {
     setShowStartDatePicker(false);
   };
 
- const fetchExerciseGif = async (searchTerm, exerciseName) => {
+const fetchExerciseGif = async (searchTerm, exerciseName) => {
   try {
     const url =
       `https://exercise-db-with-videos-and-images-by-ascendapi.p.rapidapi.com/api/v1/exercises/search?search=${encodeURIComponent(searchTerm)}`;
@@ -478,38 +478,30 @@ function App() {
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'X-RapidAPI-Key': 'SUA_NOVA_API_KEY_AQUI',
-        'X-RapidAPI-Host': 'exercise-db-with-videos-and-images-by-ascendapi.p.rapidapi.com'
+        'X-RapidAPI-Key': 'SUA_API_KEY',
+        'X-RapidAPI-Host': 'exercise-db-with-videos-and-images-by-ascendapi.p.rapidapi.com',
       }
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      const text = await response.text().catch(() => '');
+      throw new Error(`HTTP ${response.status}: ${text}`);
     }
 
     const json = await response.json();
-    console.log('AscendAPI response:', json);
+    console.log('AscendAPI OK:', json);
 
     const exercise = json?.data?.[0];
+    if (!exercise) throw new Error('Nenhum exercício encontrado');
 
-    if (!exercise) {
-      throw new Error(`Nenhum exercício encontrado para "${searchTerm}"`);
-    }
+    // 👇 CAMPO CORRETO
+    const imageUrl = exercise.imageUrl;
 
-    // prioridade: gif > image > video
-    const mediaUrl =
-      exercise.gif ||
-      exercise.image ||
-      exercise.video?.['360p'] ||
-      exercise.video?.['720p'];
-
-    if (!mediaUrl) {
-      throw new Error(`Exercício sem mídia: "${exercise.name}"`);
-    }
+    if (!imageUrl) throw new Error('Exercício sem imageUrl');
 
     setExerciseImages(prev => ({
       ...prev,
-      [exerciseName]: mediaUrl
+      [exerciseName]: imageUrl
     }));
   } catch (err) {
     console.error('Erro ao buscar exercício:', err);
@@ -519,6 +511,7 @@ function App() {
     }));
   }
 };
+
 
 
   const daysElapsed = calculateDaysElapsed();
