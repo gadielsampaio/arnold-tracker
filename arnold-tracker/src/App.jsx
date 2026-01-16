@@ -491,20 +491,30 @@ function App() {
     }
 
     const data = await response.json();
+    console.log('ExerciseDB response sample:', data?.[0]);
+
 
     if (!Array.isArray(data) || data.length === 0) {
       throw new Error(`Nenhum exercício encontrado para: "${searchTerm}"`);
     }
 
-    const gifUrl = data[0]?.gifUrl;
-    if (!gifUrl) {
-      throw new Error(`Resposta sem gifUrl para: "${searchTerm}"`);
-    }
+    const pickGifUrl = (item) =>
+  item?.gifUrl || item?.gif_url || item?.gifURL || item?.gif;
 
-    setExerciseImages(prev => ({
-      ...prev,
-      [exerciseName]: gifUrl
-    }));
+// pega o primeiro item que realmente tenha gif
+const best = data.find(x => pickGifUrl(x));
+
+const gifUrl = pickGifUrl(best);
+
+if (!gifUrl) {
+  console.log('ExerciseDB itens (sem gif) - primeiros 3:', data.slice(0, 3));
+  throw new Error(`Resposta sem gifUrl para: "${searchTerm}"`);
+}
+
+setExerciseImages(prev => ({
+  ...prev,
+  [exerciseName]: gifUrl
+}));
   } catch (error) {
     console.error('Erro ao buscar imagem:', error);
     // Opcional: salva um “sentinela” pra UI parar de carregar e mostrar erro
