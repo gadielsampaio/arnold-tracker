@@ -473,7 +473,7 @@ function App() {
       // Using ExerciseDB API via RapidAPI
       const response = await fetch(`https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(searchTerm)}`, {
         headers: {
-          'X-RapidAPI-Key': 'YOUR_API_KEY_HERE', // User needs to add their key
+          'X-RapidAPI-Key': 'dc9f0460d0mshe804358c52eb702p1791c1jsn9c762314ddc4', // User needs to add their key
           'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com'
         }
       });
