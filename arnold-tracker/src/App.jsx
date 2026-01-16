@@ -470,25 +470,33 @@ function App() {
 
   const fetchExerciseGif = async (searchTerm, exerciseName) => {
     try {
-      // Using ExerciseDB API via RapidAPI
+      console.log(`Buscando: ${searchTerm}...`); // Log para debug
+      
       const response = await fetch(`https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(searchTerm)}`, {
         headers: {
-          'X-RapidAPI-Key': 'dc9f0460d0mshe804358c52eb702p1791c1jsn9c762314ddc4', // User needs to add their key
+          'X-RapidAPI-Key': 'dc9f0460d0mshe804358c52eb702p1791c1jsn9c762314ddc4', 
           'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com'
         }
       });
       
       if (response.ok) {
         const data = await response.json();
+        console.log('Dados recebidos:', data); // Ver o que chegou da API no F12
+
         if (data && data.length > 0 && data[0].gifUrl) {
           setExerciseImages(prev => ({
             ...prev,
             [exerciseName]: data[0].gifUrl
           }));
+        } else {
+          console.warn('Nenhum GIF encontrado nestes dados.');
+          alert(`A API não retornou imagem para "${searchTerm}".`);
         }
+      } else {
+        console.error('Erro na API:', response.status);
       }
     } catch (error) {
-      console.error('Erro ao buscar imagem:', error);
+      console.error('Erro de conexão:', error);
     }
   };
 
