@@ -478,7 +478,7 @@ const fetchExerciseGif = async (searchTerm, exerciseName) => {
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'X-RapidAPI-Key': 'SUA_API_KEY',
+        'X-RapidAPI-Key': 'dc9f0460d0mshe804358c52eb702p1791c1jsn9c762314ddc4',
         'X-RapidAPI-Host': 'exercise-db-with-videos-and-images-by-ascendapi.p.rapidapi.com',
       }
     });
