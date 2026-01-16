@@ -377,6 +377,8 @@ function App() {
   const [showTips, setShowTips] = useState({});
   const [showExerciseImage, setShowExerciseImage] = useState({});
   const [exerciseImages, setExerciseImages] = useState({});
+  const [imageLoading, setImageLoading] = useState({});
+
 
   // CORREÇÃO: Inicialização "Lazy" (Lê direto do localStorage ao criar o estado)
   const [logs, setLogs] = useState(() => {
@@ -469,36 +471,49 @@ function App() {
   };
 
   const fetchExerciseGif = async (searchTerm, exerciseName) => {
-    try {
-      console.log(`Buscando: ${searchTerm}...`); // Log para debug
-      
-      const response = await fetch(`https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(searchTerm)}`, {
-        headers: {
-          'X-RapidAPI-Key': 'dc9f0460d0mshe804358c52eb702p1791c1jsn9c762314ddc4', 
-          'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com'
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Dados recebidos:', data); // Ver o que chegou da API no F12
+  try {
+    const url = `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(searchTerm)}`;
 
-        if (data && data.length > 0 && data[0].gifUrl) {
-          setExerciseImages(prev => ({
-            ...prev,
-            [exerciseName]: data[0].gifUrl
-          }));
-        } else {
-          console.warn('Nenhum GIF encontrado nestes dados.');
-          alert(`A API não retornou imagem para "${searchTerm}".`);
-        }
-      } else {
-        console.error('Erro na API:', response.status);
+    const response = await fetch(url, {
+      method: 'GET',
+      cache: 'no-store', // <- evita 304 e “cache preso”
+      headers: {
+        'X-RapidAPI-Key': 'dc9f0460d0mshe804358c52eb702p1791c1jsn9c762314ddc4',
+        'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com',
+        'Accept': 'application/json'
       }
-    } catch (error) {
-      console.error('Erro de conexão:', error);
+    });
+
+    if (!response.ok) {
+      // Mostra o erro real no console pra você enxergar (401, 429, 404 etc.)
+      const text = await response.text().catch(() => '');
+      throw new Error(`ExerciseDB: ${response.status} ${response.statusText} ${text}`);
     }
-  };
+
+    const data = await response.json();
+
+    if (!Array.isArray(data) || data.length === 0) {
+      throw new Error(`Nenhum exercício encontrado para: "${searchTerm}"`);
+    }
+
+    const gifUrl = data[0]?.gifUrl;
+    if (!gifUrl) {
+      throw new Error(`Resposta sem gifUrl para: "${searchTerm}"`);
+    }
+
+    setExerciseImages(prev => ({
+      ...prev,
+      [exerciseName]: gifUrl
+    }));
+  } catch (error) {
+    console.error('Erro ao buscar imagem:', error);
+    // Opcional: salva um “sentinela” pra UI parar de carregar e mostrar erro
+    setExerciseImages(prev => ({
+      ...prev,
+      [exerciseName]: null
+    }));
+  }
+};
 
   const daysElapsed = calculateDaysElapsed();
   const daysBehind = calculateDaysBehind();
@@ -725,7 +740,6 @@ function App() {
             const log = getLog(exercise.name);
             const suggestion = getSuggestion(exercise.name);
             const isImageVisible = showExerciseImage[exercise.name];
-            const hasImage = exerciseImages[exercise.name];
 
             return (
               <div key={index} className="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden">
@@ -742,9 +756,16 @@ function App() {
                     </div>
                     <div className="flex gap-2">
                       <button
-                        onClick={() => {
-                          if (!hasImage) fetchExerciseGif(exercise.searchTerm, exercise.name);
-                          setShowExerciseImage(prev => ({...prev, [exercise.name]: !prev[exercise.name]}));
+                        onClick={async () => {
+                          const willOpen = !isImageVisible;
+                          setShowExerciseImage(prev => ({ ...prev, [exercise.name]: willOpen }));
+
+                          // Se está abrindo e ainda não tem imagem, busca
+                          if (willOpen && !exerciseImages[exercise.name] && !imageLoading[exercise.name]) {
+                            setImageLoading(prev => ({ ...prev, [exercise.name]: true }));
+                            await fetchExerciseGif(exercise.searchTerm, exercise.name);
+                            setImageLoading(prev => ({ ...prev, [exercise.name]: false }));
+                          }
                         }}
                         className={`p-2 rounded-lg transition-colors ${isImageVisible ? 'bg-red-600 text-white' : 'bg-zinc-800 text-zinc-400'}`}
                       >
@@ -762,10 +783,19 @@ function App() {
                   {/* Exercise GIF Area */}
                   {isImageVisible && (
                     <div className="mt-4 mb-4 bg-black rounded-lg overflow-hidden aspect-video flex items-center justify-center border border-zinc-700">
-                      {hasImage ? (
-                        <img src={hasImage} alt={exercise.name} className="w-full h-full object-contain" />
-                      ) : (
+                      {imageLoading[exercise.name] ? (
                         <div className="text-zinc-500 text-sm animate-pulse">Carregando visualização...</div>
+                      ) : exerciseImages[exercise.name] ? (
+                        <img
+                          src={exerciseImages[exercise.name]}
+                          alt={exercise.name}
+                          className="w-full h-full object-contain"
+                          onError={(e) => console.error('Falha ao carregar IMG', e)}
+                        />
+                      ) : (
+                        <div className="text-zinc-500 text-sm">
+                          Não foi possível carregar a imagem (veja o Console).
+                        </div>
                       )}
                     </div>
                   )}
