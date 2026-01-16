@@ -470,60 +470,56 @@ function App() {
     setShowStartDatePicker(false);
   };
 
-  const fetchExerciseGif = async (searchTerm, exerciseName) => {
+ const fetchExerciseGif = async (searchTerm, exerciseName) => {
   try {
-    const url = `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(searchTerm)}`;
+    const url =
+      `https://exercise-db-with-videos-and-images-by-ascendapi.p.rapidapi.com/api/v1/exercises/search?search=${encodeURIComponent(searchTerm)}`;
 
     const response = await fetch(url, {
       method: 'GET',
-      cache: 'no-store', // <- evita 304 e “cache preso”
       headers: {
-        'X-RapidAPI-Key': 'dc9f0460d0mshe804358c52eb702p1791c1jsn9c762314ddc4',
-        'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com',
-        'Accept': 'application/json'
+        'X-RapidAPI-Key': 'SUA_NOVA_API_KEY_AQUI',
+        'X-RapidAPI-Host': 'exercise-db-with-videos-and-images-by-ascendapi.p.rapidapi.com'
       }
     });
 
     if (!response.ok) {
-      // Mostra o erro real no console pra você enxergar (401, 429, 404 etc.)
-      const text = await response.text().catch(() => '');
-      throw new Error(`ExerciseDB: ${response.status} ${response.statusText} ${text}`);
+      throw new Error(`HTTP ${response.status}`);
     }
 
-    const data = await response.json();
-    console.log('ExerciseDB response sample:', data?.[0]);
+    const json = await response.json();
+    console.log('AscendAPI response:', json);
 
+    const exercise = json?.data?.[0];
 
-    if (!Array.isArray(data) || data.length === 0) {
-      throw new Error(`Nenhum exercício encontrado para: "${searchTerm}"`);
+    if (!exercise) {
+      throw new Error(`Nenhum exercício encontrado para "${searchTerm}"`);
     }
 
-    const pickGifUrl = (item) =>
-  item?.gifUrl || item?.gif_url || item?.gifURL || item?.gif;
+    // prioridade: gif > image > video
+    const mediaUrl =
+      exercise.gif ||
+      exercise.image ||
+      exercise.video?.['360p'] ||
+      exercise.video?.['720p'];
 
-// pega o primeiro item que realmente tenha gif
-const best = data.find(x => pickGifUrl(x));
+    if (!mediaUrl) {
+      throw new Error(`Exercício sem mídia: "${exercise.name}"`);
+    }
 
-const gifUrl = pickGifUrl(best);
-
-if (!gifUrl) {
-  console.log('ExerciseDB itens (sem gif) - primeiros 3:', data.slice(0, 3));
-  throw new Error(`Resposta sem gifUrl para: "${searchTerm}"`);
-}
-
-setExerciseImages(prev => ({
-  ...prev,
-  [exerciseName]: gifUrl
-}));
-  } catch (error) {
-    console.error('Erro ao buscar imagem:', error);
-    // Opcional: salva um “sentinela” pra UI parar de carregar e mostrar erro
+    setExerciseImages(prev => ({
+      ...prev,
+      [exerciseName]: mediaUrl
+    }));
+  } catch (err) {
+    console.error('Erro ao buscar exercício:', err);
     setExerciseImages(prev => ({
       ...prev,
       [exerciseName]: null
     }));
   }
 };
+
 
   const daysElapsed = calculateDaysElapsed();
   const daysBehind = calculateDaysBehind();
